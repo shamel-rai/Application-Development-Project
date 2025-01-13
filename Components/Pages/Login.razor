@@ -1,0 +1,83 @@
+﻿@page "/"
+@layout Layout.Starter
+@using MoneyTracks.Models;
+@inject MoneyTracks.Services.LocalDbService DbService 
+@inject NavigationManager Navigation 
+
+<div class="container d-flex justify-content-center align-items-center vh-100">
+    <div class="card shadow-lg p-5" style="max-width: 450px; width: 100%; border-radius: 12px;">
+        <form @onsubmit="HandleLogin">
+            <h3 class="text-center mb-4" style="font-size: 1.8rem; font-weight: bold;">Log in to Your Account</h3>
+
+            <div class="mb-4">
+                <label for="emailUsername" class="form-label">Email or Username</label>
+                <input type="text" id="emailUsername" class="form-control" placeholder="Enter your email or username" required style="font-size: 1rem; padding: 10px;" @bind="emailUsername" />
+            </div>
+
+            <div class="mb-4">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" id="password" class="form-control" placeholder="Enter your password" required style="font-size: 1rem; padding: 10px;" @bind="password" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(loginErrorMessage))
+            {
+                <div class="alert alert-danger" role="alert">
+                    @loginErrorMessage
+                </div>
+            }
+
+            <button type="submit" class="btn btn-danger w-100" style="font-size: 1.1rem; padding: 12px;">Log In</button>
+
+            <p class="text-center mt-3 mb-0">
+                Don't have an account? <a href="/signup" class="text-decoration-none" style="font-size: 1rem; color: #007bff;">Sign up</a>
+            </p>
+        </form>
+    </div>
+</div>
+
+@code {
+    private string emailUsername { get; set; } = string.Empty; // User input for email or username
+    private string password { get; set; } = string.Empty; // User input for password
+    private string? loginErrorMessage { get; set; } // Nullable string for error messages
+
+    private async Task HandleLogin()
+    {
+        try
+        {
+            // Fetch all users from the database
+            var users = await DbService.GetUsers();
+
+            // Hash the user input password
+            var hashedInputPassword = HashPassword(password);
+
+            // Check if a user with matching email/username and hashed password exists
+            var user = users.FirstOrDefault(u =>
+                (u.Email == emailUsername || u.Username == emailUsername) && u.Password == hashedInputPassword);
+
+            if (user != null)
+            {
+                // Redirect to the dashboard or homepage after successful login
+                Navigation.NavigateTo("/add-transaction");
+            }
+            else
+            {
+                // Set error message for invalid credentials
+                loginErrorMessage = "Invalid username or password. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            // Display any unexpected errors
+            loginErrorMessage = $"An error occurred: {ex.Message}";
+        }
+    }
+
+    // Hashes a password using SHA256
+    private string HashPassword(string plainPassword)
+    {
+        using var sha256 = System.Security.Cryptography.SHA256.Create();
+        var bytes = System.Text.Encoding.UTF8.GetBytes(plainPassword);
+        var hash = sha256.ComputeHash(bytes);
+        return Convert.ToBase64String(hash);
+    }
+}

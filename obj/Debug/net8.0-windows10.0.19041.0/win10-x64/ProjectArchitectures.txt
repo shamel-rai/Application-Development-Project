@@ -1,0 +1,1 @@
+E:\Application Development\MoneyTracks\MoneyTracks\MoneyTracks.csproj;x64

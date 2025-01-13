@@ -1,0 +1,45 @@
+{
+  "Files": [
+    {
+      "Id": "E:\\Application Development\\MoneyTracks\\MoneyTracks\\obj\\Debug\\net8.0-android\\scopedcss\\bundle\\MoneyTracks.styles.css",
+      "PackagePath": "staticwebassets\\MoneyTracks.styles.css"
+    },
+    {
+      "Id": "E:\\Application Development\\MoneyTracks\\MoneyTracks\\wwwroot\\css\\app.css",
+      "PackagePath": "staticwebassets\\css\\app.css"
+    },
+    {
+      "Id": "E:\\Application Development\\MoneyTracks\\MoneyTracks\\wwwroot\\css\\bootstrap\\bootstrap.min.css",
+      "PackagePath": "staticwebassets\\css\\bootstrap\\bootstrap.min.css"
+    },
+    {
+      "Id": "E:\\Application Development\\MoneyTracks\\MoneyTracks\\wwwroot\\css\\bootstrap\\bootstrap.min.css.map",
+      "PackagePath": "staticwebassets\\css\\bootstrap\\bootstrap.min.css.map"
+    },
+    {
+      "Id": "E:\\Application Development\\MoneyTracks\\MoneyTracks\\wwwroot\\favicon.png",
+      "PackagePath": "staticwebassets\\favicon.png"
+    },
+    {
+      "Id": "E:\\Application Development\\MoneyTracks\\MoneyTracks\\wwwroot\\index.html",
+      "PackagePath": "staticwebassets\\index.html"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0-android\\staticwebassets\\msbuild.MoneyTracks.Microsoft.AspNetCore.StaticWebAssets.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0-android\\staticwebassets\\msbuild.build.MoneyTracks.props",
+      "PackagePath": "build\\MoneyTracks.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0-android\\staticwebassets\\msbuild.buildMultiTargeting.MoneyTracks.props",
+      "PackagePath": "buildMultiTargeting\\MoneyTracks.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0-android\\staticwebassets\\msbuild.buildTransitive.MoneyTracks.props",
+      "PackagePath": "buildTransitive\\MoneyTracks.props"
+    }
+  ],
+  "ElementsToRemove": []
+}

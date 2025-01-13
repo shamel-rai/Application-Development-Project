@@ -1,0 +1,243 @@
+﻿@page "/dashboard"
+@using MoneyTracks.Models;
+@inject MoneyTracks.Services.LocalDbService DbService
+
+<div class="container mt-5">
+    <style>
+        .stat-card {
+            transition: transform 0.2s ease;
+            background: linear-gradient(145deg, #ffffff, #f6f6f6);
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
+        }
+
+            .stat-card:hover {
+                transform: translateY(-5px);
+            }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 600;
+            line-height: 1.2;
+        }
+
+        .list-group-item {
+            transition: background-color 0.2s ease;
+        }
+
+            .list-group-item:hover {
+                background-color: #f8f9fa;
+            }
+
+        .card {
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+            transition: box-shadow 0.3s ease;
+        }
+
+            .card:hover {
+                box-shadow: 0 0 30px rgba(0,0,0,0.1);
+            }
+
+        .progress {
+            height: 6px;
+        }
+
+        .heading-gradient-primary {
+            background: linear-gradient(45deg, #0d6efd, #0dcaf0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .heading-gradient-success {
+            background: linear-gradient(45deg, #198754, #20c997);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .heading-gradient-danger {
+            background: linear-gradient(45deg, #dc3545, #fd7e14);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+
+    <!-- Dashboard Summary -->
+    <div class="card mb-5 border-0 rounded-4">
+        <div class="card-header bg-primary bg-gradient text-white border-0 py-4">
+            <h4 class="fw-bold mb-0">
+                <i class="bi bi-grid-1x2-fill me-2"></i>
+                Dashboard Summary
+            </h4>
+        </div>
+        <div class="card-body">
+            <div class="row g-4">
+                <!-- Cash Flow Card -->
+                <div class="col-md-4">
+                    <div class="stat-card p-4 rounded-4 h-100">
+                        <div class="d-flex justify-content-between mb-4">
+                            <h6 class="text-primary">Cash Flow</h6>
+                            <i class="bi bi-currency-dollar text-primary fs-4"></i>
+                        </div>
+                        <div class="mb-4">
+                            <small class="text-muted d-block mb-2">Total Inflows</small>
+                            <h5 class="text-success mb-0 stat-value">@SummaryData.TotalInflows.ToString("C")</h5>
+                        </div>
+                        <div>
+                            <small class="text-muted d-block mb-2">Total Outflows</small>
+                            <h5 class="text-danger mb-0 stat-value">@SummaryData.TotalOutflows.ToString("C")</h5>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Total Debts Card -->
+                <div class="col-md-4">
+                    <div class="stat-card p-4 rounded-4 h-100">
+                        <div class="d-flex justify-content-between mb-4">
+                            <h6 class="text-success">Total Debts</h6>
+                            <i class="bi bi-wallet2 text-success fs-4"></i>
+                        </div>
+                        <h3 class="stat-value mb-3">@SummaryData.TotalDebts.ToString("C")</h3>
+                        <div class="progress">
+                            <div class="progress-bar bg-success" style="width: 75%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Debt Status Card -->
+                <div class="col-md-4">
+                    <div class="stat-card p-4 rounded-4 h-100">
+                        <div class="d-flex justify-content-between mb-4">
+                            <h6 class="text-danger">Debt Status</h6>
+                            <i class="bi bi-pie-chart-fill text-danger fs-4"></i>
+                        </div>
+                        <div class="mb-4">
+                            <small class="text-muted d-block mb-2">Cleared Debts</small>
+                            <h5 class="text-success mb-0 stat-value">@SummaryData.ClearedDebts.ToString("C")</h5>
+                        </div>
+                        <div>
+                            <small class="text-muted d-block mb-2">Remaining Debts</small>
+                            <h5 class="text-danger mb-0 stat-value">@SummaryData.RemainingDebts.ToString("C")</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Transactions -->
+    <div class="card mb-5 border-0 rounded-4">
+        <div class="card-header bg-success bg-gradient text-white border-0 py-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <h4 class="fw-bold mb-0">
+                    <i class="bi bi-arrow-left-right me-2"></i>
+                    Top 5 Transactions
+                </h4>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            @if (FilteredTransactions == null || !FilteredTransactions.Any())
+            {
+                <div class="p-4 text-center">
+                    <i class="bi bi-inbox fs-1 text-muted"></i>
+                    <p class="text-muted mt-2">No transactions found</p>
+                </div>
+            }
+            else
+            {
+                <div class="list-group list-group-flush">
+                    @foreach (var transaction in FilteredTransactions)
+                    {
+                        <div class="list-group-item border-0 py-4 px-4">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1 fw-semibold">@transaction.Title</h6>
+                                    <span class="badge @(transaction.Type == "Income" ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger") rounded-pill">
+                                        @transaction.Type
+                                    </span>
+                                </div>
+                                <span class="fs-5 fw-semibold @(transaction.Type == "Income" ? "text-success" : "text-danger")">
+                                    @transaction.Amount.ToString("C")
+                                </span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Pending Debts -->
+    <div class="card border-0 rounded-4">
+        <div class="card-header bg-danger bg-gradient text-white border-0 py-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <h4 class="fw-bold mb-0">
+                    <i class="bi bi-clock-history me-2"></i>
+                    Pending Debts
+                </h4>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            @if (FilteredPendingDebts == null || !FilteredPendingDebts.Any())
+            {
+                <div class="p-4 text-center">
+                    <i class="bi bi-inbox fs-1 text-muted"></i>
+                    <p class="text-muted mt-2">No pending debts found</p>
+                </div>
+            }
+            else
+            {
+                <div class="list-group list-group-flush">
+                    @foreach (var debt in FilteredPendingDebts)
+                    {
+                        <div class="list-group-item border-0 py-4 px-4">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1 fw-semibold">@debt.Title</h6>
+                                    <small class="text-muted">
+                                        <i class="bi bi-calendar3 me-1"></i>
+                                        Due: @debt.DueDate.ToShortDateString()
+                                    </small>
+                                </div>
+                                <span class="fs-5 fw-semibold text-danger">
+                                    @debt.Amount.ToString("C")
+                                </span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private DashboardSummary SummaryData = new();
+    private List<Transaction> TopTransactions = new();
+    private List<Debt> PendingDebts = new();
+    private List<Transaction> FilteredTransactions = new();
+    private List<Debt> FilteredPendingDebts = new();
+
+    private string SelectedTransactionType = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        SummaryData = await DbService.GetDashboardSummary();
+        TopTransactions = await DbService.GetTopTransactions(5);
+        PendingDebts = await DbService.GetPendingDebtsDashboard();
+        FilterData();
+    }
+
+    private void FilterData()
+    {
+        FilteredTransactions = string.IsNullOrWhiteSpace(SelectedTransactionType)
+            ? TopTransactions
+            : TopTransactions.Where(t => t.Type == SelectedTransactionType).ToList();
+
+        FilteredPendingDebts = PendingDebts;
+    }
+
+    private void UpdateFilters(string type)
+    {
+        SelectedTransactionType = type;
+        FilterData();
+    }
+}

@@ -1,0 +1,139 @@
+﻿@page "/signup"
+@layout Layout.Starter
+@using MoneyTracks.Models;
+@inject MoneyTracks.Services.LocalDbService DbService
+@inject NavigationManager Navigation
+
+
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">User Registration</h3>
+                </div>
+                <div class="card-body">
+                    <form @onsubmit="HandleSignup">
+                        <!-- Username field -->
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username*</label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="username"
+                                   @bind="user.Username"
+                                   maxlength="100"
+                                   required>
+                        </div>
+
+                        <!-- Email field -->
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email"
+                                   class="form-control"
+                                   id="email"
+                                   @bind="user.Email"
+                                   required>
+                        </div>
+
+                        <!-- Password field -->
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password*</label>
+                            <input type="password"
+                                   class="form-control"
+                                   id="password"
+                                   @bind="password"
+                                   required>
+                        </div>
+
+                        <!-- Preferred Currency field -->
+                        <div class="mb-3">
+                            <label for="preferredCurrency" class="form-label">Preferred Currency*</label>
+                            <select class="form-select"
+                                    id="preferredCurrency"
+                                    @bind="user.PreferredCurrency"
+                                    required>
+                                <option value="">Select Currency</option>
+                                <option value="USD">USD - US Dollar</option>
+                                <option value="EUR">EUR - Euro</option>
+                                <option value="GBP">GBP - British Pound</option>
+                                <option value="JPY">JPY - Japanese Yen</option>
+                                <option value="AUD">AUD - Australian Dollar</option>
+                            </select>
+                        </div>
+
+                        <!-- Success and Error Messages -->
+                        @if (!string.IsNullOrEmpty(successMessage))
+                        {
+                            <div class="alert alert-success">
+                                @successMessage
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            <div class="alert alert-danger">
+                                @errorMessage
+                            </div>
+                        }
+
+                        <!-- Register Button -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Register</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code {
+    private User user = new User(); // Holds form input
+    private string password = string.Empty; // Temporarily holds the plain-text password
+    private string? successMessage = null;
+    private string? errorMessage = null;
+
+    private async Task HandleSignup()
+    {
+        try
+        {
+            // Check for duplicate username or email
+            var users = await DbService.GetUsers();
+            if (users.Any(u => u.Username == user.Username || u.Email == user.Email))
+            {
+                errorMessage = "A user with the same username or email already exists.";
+                return;
+            }
+
+            // Hash the password
+            user.Password = HashPassword(password);
+
+            // Save the user to the database
+            await DbService.Create(user);
+            successMessage = "User registered successfully!";
+            errorMessage = null;
+
+            // Reset the form fields
+            user = new User();
+            password = string.Empty;
+
+            // Redirect to login or dashboard
+            Navigation.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+            successMessage = null;
+        }
+    }
+
+    // Hashes a password using SHA256
+    private string HashPassword(string plainPassword)
+    {
+        using var sha256 = System.Security.Cryptography.SHA256.Create();
+        var bytes = System.Text.Encoding.UTF8.GetBytes(plainPassword);
+        var hash = sha256.ComputeHash(bytes);
+        return Convert.ToBase64String(hash);
+    }
+}
