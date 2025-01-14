@@ -1,9 +1,11 @@
 ﻿@page "/dashboard"
-@using MoneyTracks.Models;
+@using MoneyTracks.Models
+@using System.Globalization
 @inject MoneyTracks.Services.LocalDbService DbService
 
 <div class="container mt-5">
     <style>
+        /* Basic styling for a modern card-like look */
         .stat-card {
             transition: transform 0.2s ease;
             background: linear-gradient(145deg, #ffffff, #f6f6f6);
@@ -40,25 +42,14 @@
         .progress {
             height: 6px;
         }
-
-        .heading-gradient-primary {
-            background: linear-gradient(45deg, #0d6efd, #0dcaf0);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .heading-gradient-success {
-            background: linear-gradient(45deg, #198754, #20c997);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .heading-gradient-danger {
-            background: linear-gradient(45deg, #dc3545, #fd7e14);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
     </style>
+
+    <!-- Button to manually refresh the dashboard data -->
+    <div class="mb-3 text-end">
+        <button class="btn btn-info" @onclick="RefreshDashboard">
+            <i class="bi bi-arrow-repeat me-1"></i>Refresh Dashboard
+        </button>
+    </div>
 
     <!-- Dashboard Summary -->
     <div class="card mb-5 border-0 rounded-4">
@@ -71,7 +62,7 @@
         <div class="card-body">
             <div class="row g-4">
                 <!-- Cash Flow Card -->
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="stat-card p-4 rounded-4 h-100">
                         <div class="d-flex justify-content-between mb-4">
                             <h6 class="text-primary">Cash Flow</h6>
@@ -79,31 +70,53 @@
                         </div>
                         <div class="mb-4">
                             <small class="text-muted d-block mb-2">Total Inflows</small>
-                            <h5 class="text-success mb-0 stat-value">@SummaryData.TotalInflows.ToString("C")</h5>
+                            <h5 class="text-success mb-0 stat-value">
+                                @FormatAmount(SummaryData.TotalInflows)
+                            </h5>
                         </div>
                         <div>
                             <small class="text-muted d-block mb-2">Total Outflows</small>
-                            <h5 class="text-danger mb-0 stat-value">@SummaryData.TotalOutflows.ToString("C")</h5>
+                            <h5 class="mb-0 stat-value @(SummaryData.TotalOutflows > SummaryData.TotalInflows ? "text-danger" : "text-success")">
+                                @FormatOutflow(SummaryData.TotalOutflows, SummaryData.TotalInflows)
+                            </h5>
                         </div>
                     </div>
                 </div>
 
                 <!-- Total Debts Card -->
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="stat-card p-4 rounded-4 h-100">
                         <div class="d-flex justify-content-between mb-4">
                             <h6 class="text-success">Total Debts</h6>
                             <i class="bi bi-wallet2 text-success fs-4"></i>
                         </div>
-                        <h3 class="stat-value mb-3">@SummaryData.TotalDebts.ToString("C")</h3>
+
+                        <!-- Show total debt amount -->
+                        <h3 class="stat-value mb-2">
+                            @FormatAmount(SummaryData.TotalDebts)
+                        </h3>
+
+                        <!-- Show number of debts -->
+                        <small class="text-muted d-block mb-3">
+                            Number of Debts: @NumberOfDebts
+                        </small>
+
                         <div class="progress">
-                            <div class="progress-bar bg-success" style="width: 75%"></div>
+                            @if (SummaryData.TotalDebts > 0)
+                            {
+                                var clearedPercent = (SummaryData.ClearedDebts / SummaryData.TotalDebts) * 100;
+                                <div class="progress-bar bg-success" style="width: @clearedPercent%"></div>
+                            }
+                            else
+                            {
+                                <div class="progress-bar bg-success" style="width: 0%"></div>
+                            }
                         </div>
                     </div>
                 </div>
 
                 <!-- Debt Status Card -->
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="stat-card p-4 rounded-4 h-100">
                         <div class="d-flex justify-content-between mb-4">
                             <h6 class="text-danger">Debt Status</h6>
@@ -111,12 +124,29 @@
                         </div>
                         <div class="mb-4">
                             <small class="text-muted d-block mb-2">Cleared Debts</small>
-                            <h5 class="text-success mb-0 stat-value">@SummaryData.ClearedDebts.ToString("C")</h5>
+                            <h5 class="text-success mb-0 stat-value">
+                                @FormatAmount(SummaryData.ClearedDebts)
+                            </h5>
                         </div>
                         <div>
                             <small class="text-muted d-block mb-2">Remaining Debts</small>
-                            <h5 class="text-danger mb-0 stat-value">@SummaryData.RemainingDebts.ToString("C")</h5>
+                            <h5 class="text-danger mb-0 stat-value">
+                                @FormatAmount(SummaryData.RemainingDebts)
+                            </h5>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Available Cash Card -->
+                <div class="col-md-3">
+                    <div class="stat-card p-4 rounded-4 h-100">
+                        <div class="d-flex justify-content-between mb-4">
+                            <h6 class="text-info">Available Cash</h6>
+                            <i class="bi bi-cash-coin text-info fs-4"></i>
+                        </div>
+                        <h5 class="text-info mb-0 stat-value">
+                            @FormatAmount(AvailableCash)
+                        </h5>
                     </div>
                 </div>
             </div>
@@ -126,12 +156,10 @@
     <!-- Top Transactions -->
     <div class="card mb-5 border-0 rounded-4">
         <div class="card-header bg-success bg-gradient text-white border-0 py-4">
-            <div class="d-flex justify-content-between align-items-center">
-                <h4 class="fw-bold mb-0">
-                    <i class="bi bi-arrow-left-right me-2"></i>
-                    Top 5 Transactions
-                </h4>
-            </div>
+            <h4 class="fw-bold mb-0">
+                <i class="bi bi-arrow-left-right me-2"></i>
+                Top 5 Transactions
+            </h4>
         </div>
         <div class="card-body p-0">
             @if (FilteredTransactions == null || !FilteredTransactions.Any())
@@ -150,12 +178,12 @@
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
                                     <h6 class="mb-1 fw-semibold">@transaction.Title</h6>
-                                    <span class="badge @(transaction.Type == "Income" ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger") rounded-pill">
+                                    <span class="badge @(transaction.Type == "Credit" ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger") rounded-pill">
                                         @transaction.Type
                                     </span>
                                 </div>
-                                <span class="fs-5 fw-semibold @(transaction.Type == "Income" ? "text-success" : "text-danger")">
-                                    @transaction.Amount.ToString("C")
+                                <span class="fs-5 fw-semibold @(transaction.Type == "Credit" ? "text-success" : "text-danger")">
+                                    @FormatAmount(transaction.Amount)
                                 </span>
                             </div>
                         </div>
@@ -168,12 +196,10 @@
     <!-- Pending Debts -->
     <div class="card border-0 rounded-4">
         <div class="card-header bg-danger bg-gradient text-white border-0 py-4">
-            <div class="d-flex justify-content-between align-items-center">
-                <h4 class="fw-bold mb-0">
-                    <i class="bi bi-clock-history me-2"></i>
-                    Pending Debts
-                </h4>
-            </div>
+            <h4 class="fw-bold mb-0">
+                <i class="bi bi-clock-history me-2"></i>
+                Pending Debts
+            </h4>
         </div>
         <div class="card-body p-0">
             @if (FilteredPendingDebts == null || !FilteredPendingDebts.Any())
@@ -198,7 +224,7 @@
                                     </small>
                                 </div>
                                 <span class="fs-5 fw-semibold text-danger">
-                                    @debt.Amount.ToString("C")
+                                    @FormatAmount(debt.TotalAmount)
                                 </span>
                             </div>
                         </div>
@@ -210,34 +236,118 @@
 </div>
 
 @code {
+    // Summary data from the service
     private DashboardSummary SummaryData = new();
+
+    // All debts (so we can get the count)
+    private List<Debt> AllDebts = new();
+    private int NumberOfDebts;
+
+    // Top transactions data
     private List<Transaction> TopTransactions = new();
-    private List<Debt> PendingDebts = new();
     private List<Transaction> FilteredTransactions = new();
+
+    // Pending debts
+    private List<Debt> PendingDebts = new();
     private List<Debt> FilteredPendingDebts = new();
 
+    // Calculated AvailableCash
+    private decimal AvailableCash = 0;
+
+    // For filtering top transactions by type (optional)
     private string SelectedTransactionType = "";
+
+    // For currency display
+    private string PreferredCurrency = "USD";
+    private CultureInfo PreferredCulture = CultureInfo.InvariantCulture;
 
     protected override async Task OnInitializedAsync()
     {
+        // Initial load
+        await LoadDashboardData();
+    }
+
+    private async Task LoadDashboardData()
+    {
+        // Load user for currency preference
+        var user = await DbService.GetLoggedInUser();
+        PreferredCurrency = user?.PreferredCurrency ?? "USD";
+        PreferredCulture = GetCultureInfo(PreferredCurrency);
+
+        // Load the summary
         SummaryData = await DbService.GetDashboardSummary();
+
+        // Load top 5 transactions
         TopTransactions = await DbService.GetTopTransactions(5);
+
+        // Load all debts to get the count & pending debts
+        AllDebts = await DbService.GetAllDebts();
+        NumberOfDebts = AllDebts.Count;
+
         PendingDebts = await DbService.GetPendingDebtsDashboard();
+
+        // Load available cash from service so changes in
+        // transactions or partial debt payments are reflected
+        AvailableCash = await DbService.GetAvailableCash();
+
+        // Filter data
         FilterData();
+    }
+
+    /// <summary>
+    /// Called by the "Refresh Dashboard" button or manually.
+    /// </summary>
+    private async Task RefreshDashboard()
+    {
+        await LoadDashboardData();
+        StateHasChanged(); // Re-render with the updated data
     }
 
     private void FilterData()
     {
-        FilteredTransactions = string.IsNullOrWhiteSpace(SelectedTransactionType)
-            ? TopTransactions
-            : TopTransactions.Where(t => t.Type == SelectedTransactionType).ToList();
+        // Optional: filter top transactions by user-chosen type
+        if (string.IsNullOrWhiteSpace(SelectedTransactionType))
+        {
+            FilteredTransactions = TopTransactions;
+        }
+        else
+        {
+            FilteredTransactions = TopTransactions
+                .Where(t => t.Type == SelectedTransactionType).ToList();
+        }
 
+        // Show all pending debts (or filter further if needed)
         FilteredPendingDebts = PendingDebts;
     }
 
-    private void UpdateFilters(string type)
+    private CultureInfo GetCultureInfo(string currencyCode)
     {
-        SelectedTransactionType = type;
-        FilterData();
+        // Adjust these as desired for your region
+        return currencyCode switch
+        {
+            "USD" => new CultureInfo("en-US"),
+            "EUR" => new CultureInfo("fr-FR"),
+            "GBP" => new CultureInfo("en-GB"),
+            "JPY" => new CultureInfo("ja-JP"),
+            "INR" => new CultureInfo("en-IN"),
+            _ => CultureInfo.InvariantCulture
+        };
+    }
+
+    private string FormatAmount(decimal amount)
+    {
+        return amount.ToString("C", PreferredCulture);
+    }
+
+    /// <summary>
+    /// Example outflow formatting if outflow > inflow => negative sign
+    /// </summary>
+    private string FormatOutflow(decimal outflow, decimal inflow)
+    {
+        if (outflow > inflow)
+        {
+            return "-" + outflow.ToString("C", PreferredCulture);
+        }
+        return outflow.ToString("C", PreferredCulture);
     }
 }

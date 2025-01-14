@@ -30,7 +30,7 @@
     <AppXManifest Include="E:\Application Development\MoneyTracks\MoneyTracks\bin\Debug\net8.0-windows10.0.19041.0\win10-x64\AppxManifest.xml">
       <PackagePath>AppxManifest.xml</PackagePath>
       <ReRegisterAppIfChanged>true</ReRegisterAppIfChanged>
-      <Modified>2025-01-13T09:27:56.223</Modified>
+      <Modified>2025-01-14T13:36:30.856</Modified>
     </AppXManifest>
   </ItemGroup>
   <ItemGroup>
@@ -44,11 +44,11 @@
     </AppxPackagedFile>
     <AppxPackagedFile Include="E:\Application Development\MoneyTracks\MoneyTracks\bin\Debug\net8.0-windows10.0.19041.0\win10-x64\MoneyTracks.dll">
       <PackagePath>MoneyTracks.dll</PackagePath>
-      <Modified>2025-01-13T09:27:55.186</Modified>
+      <Modified>2025-01-14T13:36:30.608</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="E:\Application Development\MoneyTracks\MoneyTracks\obj\Debug\net8.0-windows10.0.19041.0\win10-x64\apphost.exe">
       <PackagePath>MoneyTracks.exe</PackagePath>
-      <Modified>2025-01-13T09:27:55.281</Modified>
+      <Modified>2025-01-14T13:36:30.611</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="E:\Application Development\MoneyTracks\MoneyTracks\Resources\Raw\AboutAssets.txt">
       <PackagePath>AboutAssets.txt</PackagePath>
