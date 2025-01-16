@@ -27,12 +27,11 @@ namespace MoneyTracks.Services
             _connection.CreateTableAsync<Debt>().Wait();
         }
 
-        // ---------------------
         //  User CRUD
-        // ---------------------
+      
         public async Task<User> GetLoggedInUser()
         {
-            // For demo, returns the first user in the DB
+            // returns the first user in the DB
             return await _connection.Table<User>().FirstOrDefaultAsync();
         }
 
@@ -49,9 +48,9 @@ namespace MoneyTracks.Services
             await _connection.DeleteAsync(user);
 
 
-        // ---------------------
+     
         //  Transaction CRUD
-        // ---------------------
+      
         public async Task<List<Transaction>> GetTransactions() =>
             await _connection.Table<Transaction>().ToListAsync();
 
@@ -98,9 +97,8 @@ namespace MoneyTracks.Services
         }
 
 
-        // ---------------------
         //  Dashboard
-        // ---------------------
+      
         public async Task<DashboardSummary> GetDashboardSummary()
         {
             var transactions = await GetTransactions();
@@ -126,9 +124,8 @@ namespace MoneyTracks.Services
         }
 
 
-        // ---------------------
         //  Debt CRUD
-        // ---------------------
+ 
         public async Task<List<Debt>> GetAllDebts() =>
             await _connection.Table<Debt>().ToListAsync();
 
@@ -164,7 +161,7 @@ namespace MoneyTracks.Services
             await _connection.DeleteAsync(debt);
 
 
-        // Handle Debt Payment
+        // Handles Debt Payment
         public async Task CreateDebtPaymentTransaction(Transaction transaction)
         {
             if (transaction.IsPendingDebt)

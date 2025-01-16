@@ -12,20 +12,17 @@ namespace MoneyTracks.Models
 
         public string Title { get; set; }
 
-        // "Credit", "Debit", "Debt", or "DebtPayment"
         public string Type { get; set; }
 
         public decimal Amount { get; set; }
 
-        // Comma-separated custom tags
         public string Tags { get; set; }
 
-        // Single date property for the transaction
+     
         public DateTime Date { get; set; }
 
         public string Notes { get; set; }
 
-        // True if this transaction is intended to reduce a debt (DebtPayment)
         public bool IsPendingDebt { get; set; }
 
         // Helper property to parse tags into a list

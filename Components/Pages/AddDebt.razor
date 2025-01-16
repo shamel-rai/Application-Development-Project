@@ -304,7 +304,7 @@
         await RefreshDashboard();
     }
 
-    // --- Partial Payment Percentage Selection (just sets fraction) ---
+    // Partial Payment Percentage Selection (just sets fraction) 
     private void OnFractionChanged(Debt debt, string fractionStr)
     {
         if (string.IsNullOrWhiteSpace(fractionStr))
@@ -316,7 +316,6 @@
         // Attempt parse
         if (decimal.TryParse(fractionStr, out var fraction))
         {
-            // 0.25, 0.50, 0.75, or 1.0
             fractionSelections[debt.DebtId] = fraction;
         }
     }
@@ -326,7 +325,7 @@
     {
         // Check if we have a fraction for this debt
         if (!fractionSelections.TryGetValue(debt.DebtId, out var fraction))
-            return; // user hasn't chosen a fraction yet
+            return; 
 
         // Calculate partial amount
         decimal partialAmount = Math.Round(debt.RemainingAmount * fraction, 2);

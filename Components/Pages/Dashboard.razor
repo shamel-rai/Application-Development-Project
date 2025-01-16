@@ -71,7 +71,6 @@
         </div>
     </div>
 
-    <!-- Main Metrics Row -->
     <div class="row g-4 mb-4">
         <!-- Cash Flow Card -->
         <div class="col-md-6 col-lg-3">
@@ -334,7 +333,6 @@
     private decimal AvailableCash;
     private List<Transaction> AllTransactions = new();
 
-    // NEW: List to store recent transactions
     private List<Transaction> RecentTransactions = new();
 
     protected override async Task OnInitializedAsync()
@@ -344,10 +342,10 @@
 
     private async Task LoadDashboardData()
     {
-        // 1. Summaries
+        // Summaries
         SummaryData = await DbService.GetDashboardSummary();
 
-        // 2. All transactions => find highest/lowest
+        // All transactions => find highest/lowest
         AllTransactions = await DbService.GetTransactions();
         if (AllTransactions.Any())
         {
@@ -356,23 +354,22 @@
             LowestTransaction = sorted.LastOrDefault();
         }
 
-        // 3. Recent transactions (last 5 by Date descending)
+        // Recent transactions (last 5 by Date descending)
         RecentTransactions = AllTransactions
             .OrderByDescending(t => t.Date)
             .Take(5)
             .ToList();
 
-        // 4. Pending Debts
+        // Pending Debts
         PendingDebts = await DbService.GetPendingDebtsDashboard();
         FilteredPendingDebts = PendingDebts;
 
-        // 5. Available cash
+        // Available cash
         AvailableCash = await DbService.GetAvailableCash();
     }
 
     private string FormatAmount(decimal amount)
     {
-        // Simple approach: always show "$" or code.
         return "$" + amount.ToString("N2");
     }
 }

@@ -59,7 +59,7 @@
     {
         try
         {
-            var users = await DbService.GetUsers(); // "GetUsers()" is valid
+            var users = await DbService.GetUsers(); 
             var hashedInputPassword = HashPassword(password);
 
             var user = users.FirstOrDefault(u =>

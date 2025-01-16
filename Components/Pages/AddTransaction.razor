@@ -103,7 +103,6 @@
                             <tr>
                                 <td>@tx.Title</td>
                                 <td>@tx.Type</td>
-                                <!-- Example of dynamic currency usage -->
                                 <td>@FormatAmount(tx.Amount)</td>
                                 <td>@tx.Date.ToShortDateString()</td>
                                 <td>@tx.Notes</td>
@@ -185,12 +184,10 @@
     private bool IsEditModalVisible;
     private Transaction EditableTransaction;
 
-    // For dynamic currency
     private CultureInfo PreferredCulture = CultureInfo.InvariantCulture;
 
     protected override async Task OnInitializedAsync()
     {
-        // 1. Load user + map currency
         var user = await DbService.GetLoggedInUser();
         var code = user?.PreferredCurrency ?? "USD";
         PreferredCulture = MapCurrencyToCulture(code);
@@ -234,7 +231,7 @@
 
     private void UpdateFilteredTransactions()
     {
-        FilteredTransactions = Transactions; // Or do more advanced filtering
+        FilteredTransactions = Transactions; 
     }
 
     private async Task HandleSubmit()
@@ -246,7 +243,7 @@
         }
         await DbService.CreateTransaction(NewTransaction);
 
-        // reload
+        
         await LoadTransactionsFromDatabase();
         await UpdateOverview();
         UpdateFilteredTransactions();

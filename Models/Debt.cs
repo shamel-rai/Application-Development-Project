@@ -6,8 +6,8 @@ public class Debt
     public int DebtId { get; set; }
     public string Title { get; set; }
     public string Source { get; set; }
-    public decimal TotalAmount { get; set; } // Changed to decimal for financial precision
-    public decimal RemainingAmount { get; set; } // Changed to decimal for compatibility
+    public decimal TotalAmount { get; set; } 
+    public decimal RemainingAmount { get; set; } 
     public DateTime DueDate { get; set; }
     public bool IsCleared { get; set; } = false;
     public string Notes { get; set; }
