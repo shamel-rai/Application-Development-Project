@@ -41,27 +41,27 @@
                 <ValidationSummary class="alert alert-danger" />
 
                 <div class="col-md-6">
-                    <label class="form-label">Title</label>
-                    <InputText @bind-Value="NewTransaction.Title" class="form-control" />
+                    <label class="form-label">Title*</label>
+                    <InputText @bind-Value="NewTransaction.Title" class="form-control" required />
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Type</label>
-                    <InputSelect @bind-Value="NewTransaction.Type" class="form-select">
+                    <label class="form-label">Type*</label>
+                    <InputSelect @bind-Value="NewTransaction.Type" class="form-select" required>
                         <option value="Credit">Credit</option>
                         <option value="Debit">Debit</option>
                     </InputSelect>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Amount</label>
-                    <InputNumber @bind-Value="NewTransaction.Amount" class="form-control" />
+                    <label class="form-label">Amount*</label>
+                    <InputNumber @bind-Value="NewTransaction.Amount" class="form-control" required Min="0.01" />
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Date</label>
-                    <InputDate @bind-Value="NewTransaction.Date" class="form-control" />
+                    <label class="form-label">Date*</label>
+                    <InputDate @bind-Value="NewTransaction.Date" class="form-control" required />
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Tags</label>
-                    <InputText @bind-Value="NewTransaction.Tags" class="form-control" />
+                    <label class="form-label">Tags*</label>
+                    <InputText @bind-Value="NewTransaction.Tags" class="form-control" required />
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Notes</label>
@@ -133,27 +133,27 @@
                             <ValidationSummary class="alert alert-danger" />
 
                             <div class="col-md-6">
-                                <label class="form-label">Title</label>
-                                <InputText @bind-Value="EditableTransaction.Title" class="form-control" />
+                                <label class="form-label">Title*</label>
+                                <InputText @bind-Value="EditableTransaction.Title" class="form-control" required />
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Type</label>
-                                <InputSelect @bind-Value="EditableTransaction.Type" class="form-select">
+                                <label class="form-label">Type*</label>
+                                <InputSelect @bind-Value="EditableTransaction.Type" class="form-select" required>
                                     <option value="Credit">Credit</option>
                                     <option value="Debit">Debit</option>
                                 </InputSelect>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Amount</label>
-                                <InputNumber @bind-Value="EditableTransaction.Amount" class="form-control" />
+                                <label class="form-label">Amount*</label>
+                                <InputNumber @bind-Value="EditableTransaction.Amount" class="form-control" required Min="0.01" />
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Date</label>
-                                <InputDate @bind-Value="EditableTransaction.Date" class="form-control" />
+                                <label class="form-label">Date*</label>
+                                <InputDate @bind-Value="EditableTransaction.Date" class="form-control" required />
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Tags</label>
-                                <InputText @bind-Value="EditableTransaction.Tags" class="form-control" />
+                                <label class="form-label">Tags*</label>
+                                <InputText @bind-Value="EditableTransaction.Tags" class="form-control" required />
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Notes</label>
@@ -231,19 +231,19 @@
 
     private void UpdateFilteredTransactions()
     {
-        FilteredTransactions = Transactions; 
+        FilteredTransactions = Transactions;
     }
 
     private async Task HandleSubmit()
     {
         if (NewTransaction.Type == "Debit" && NewTransaction.Amount > AvailableBalance)
         {
-            // insufficient funds logic
+            errorMessage = "Insufficient funds for this transaction.";
             return;
         }
+
         await DbService.CreateTransaction(NewTransaction);
 
-        
         await LoadTransactionsFromDatabase();
         await UpdateOverview();
         UpdateFilteredTransactions();
@@ -298,4 +298,6 @@
         await UpdateOverview();
         UpdateFilteredTransactions();
     }
+
+    private string? errorMessage;
 }

@@ -57,25 +57,30 @@
                 <DataAnnotationsValidator />
                 <ValidationSummary class="alert alert-danger" />
 
+                @if (!string.IsNullOrEmpty(ErrorMessage))
+                {
+                    <div class="alert alert-danger">@ErrorMessage</div>
+                }
+
                 <div class="col-md-6">
                     <label class="form-label">Title</label>
-                    <InputText @bind-Value="NewDebt.Title" class="form-control" />
+                    <InputText @bind-Value="NewDebt.Title" class="form-control" required />
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Source</label>
-                    <InputText @bind-Value="NewDebt.Source" class="form-control" />
+                    <InputText @bind-Value="NewDebt.Source" class="form-control" required />
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Total Amount</label>
-                    <InputNumber @bind-Value="NewDebt.TotalAmount" class="form-control" />
+                    <InputNumber @bind-Value="NewDebt.TotalAmount" class="form-control" required Min="0.01" />
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Due Date</label>
-                    <InputDate @bind-Value="NewDebt.DueDate" class="form-control" />
+                    <InputDate @bind-Value="NewDebt.DueDate" class="form-control" required />
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Tags</label>
-                    <InputText @bind-Value="NewDebt.Tags" class="form-control" />
+                    <InputText @bind-Value="NewDebt.Tags" class="form-control" required />
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Notes</label>
@@ -196,15 +201,15 @@
 
                         <div class="col-md-6">
                             <label class="form-label">Title</label>
-                            <InputText @bind-Value="EditableDebt.Title" class="form-control" />
+                            <InputText @bind-Value="EditableDebt.Title" class="form-control" required />
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Source</label>
-                            <InputText @bind-Value="EditableDebt.Source" class="form-control" />
+                            <InputText @bind-Value="EditableDebt.Source" class="form-control" required />
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Total Amount</label>
-                            <InputNumber @bind-Value="EditableDebt.TotalAmount" class="form-control" />
+                            <InputNumber @bind-Value="EditableDebt.TotalAmount" class="form-control" required Min="0.01" />
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Remaining Amount</label>
@@ -212,11 +217,11 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Due Date</label>
-                            <InputDate @bind-Value="EditableDebt.DueDate" class="form-control" />
+                            <InputDate @bind-Value="EditableDebt.DueDate" class="form-control" required />
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Tags</label>
-                            <InputText @bind-Value="EditableDebt.Tags" class="form-control" />
+                            <InputText @bind-Value="EditableDebt.Tags" class="form-control" required />
                         </div>
                         <div class="col-12">
                             <label class="form-label">Notes</label>
@@ -237,32 +242,26 @@
 }
 
 @code {
-    // --- Main Debt Data ---
     private Debt NewDebt = new Debt { DueDate = DateTime.Today };
     private List<Debt> Debts = new();
     private List<Debt> FilteredDebts = new();
 
-    // --- Debt Metrics ---
     private decimal AvailableCash;
     private decimal TotalDebtAmount;
     private decimal ClearedDebtAmount;
     private decimal PendingDebtAmount;
     private int TotalDebtCount;
 
-    // --- For Edit Modal ---
     private bool IsEditModalVisible;
     private Debt EditableDebt;
+    private string ErrorMessage;
 
-    // We'll store the user's partial selection in memory so that
-    // the actual clearing happens only after pressing "Clear."
-    private Dictionary<int, decimal> fractionSelections = new();
+    private Dictionary<int, decimal> FractionSelections = new();
 
     protected override async Task OnInitializedAsync()
     {
-        // Load debts
         Debts = await DbService.GetAllDebts();
 
-        // Fix negative or zero remaining amounts
         foreach (var debt in Debts)
         {
             if (debt.RemainingAmount <= 0)
@@ -278,70 +277,62 @@
 
     private async Task RefreshDashboard()
     {
-        // Refresh available cash (credits - debits - debtpayments)
         AvailableCash = await DbService.GetAvailableCash();
-
-        // Update debt metrics
         TotalDebtAmount = Debts.Sum(d => d.TotalAmount);
         ClearedDebtAmount = Debts.Where(d => d.IsCleared).Sum(d => d.TotalAmount);
         PendingDebtAmount = Debts.Where(d => !d.IsCleared).Sum(d => d.RemainingAmount);
         TotalDebtCount = Debts.Count;
 
-        // Update the displayed list
         FilteredDebts = Debts;
     }
 
-    // --- Add Debt ---
     private async Task HandleSubmit()
     {
+        if (string.IsNullOrWhiteSpace(NewDebt.Title) ||
+            string.IsNullOrWhiteSpace(NewDebt.Source) ||
+            string.IsNullOrWhiteSpace(NewDebt.Tags) ||
+            NewDebt.DueDate == DateTime.MinValue ||
+            NewDebt.TotalAmount <= 0)
+        {
+            ErrorMessage = "All fields are required, and Total Amount must be greater than 0.";
+            StateHasChanged();
+            return;
+        }
+
         NewDebt.RemainingAmount = NewDebt.TotalAmount;
         await DbService.AddDebt(NewDebt);
         Debts.Add(NewDebt);
 
-        // Reset
         NewDebt = new Debt { DueDate = DateTime.Today };
+        ErrorMessage = null;
 
         await RefreshDashboard();
     }
 
-    // Partial Payment Percentage Selection (just sets fraction) 
     private void OnFractionChanged(Debt debt, string fractionStr)
     {
         if (string.IsNullOrWhiteSpace(fractionStr))
         {
-            fractionSelections.Remove(debt.DebtId);
+            FractionSelections.Remove(debt.DebtId);
             return;
         }
 
-        // Attempt parse
         if (decimal.TryParse(fractionStr, out var fraction))
         {
-            fractionSelections[debt.DebtId] = fraction;
+            FractionSelections[debt.DebtId] = fraction;
         }
     }
 
-    // --- Trigger partial payment after user clicks "Clear" ---
     private async Task ClearDebtByPercentage(Debt debt)
     {
-        // Check if we have a fraction for this debt
-        if (!fractionSelections.TryGetValue(debt.DebtId, out var fraction))
-            return; 
+        if (!FractionSelections.TryGetValue(debt.DebtId, out var fraction)) return;
 
-        // Calculate partial amount
-        decimal partialAmount = Math.Round(debt.RemainingAmount * fraction, 2);
-
-        // Basic guards
+        var partialAmount = Math.Round(debt.RemainingAmount * fraction, 2);
         if (partialAmount <= 0 || partialAmount > debt.RemainingAmount) return;
 
-        // Check available cash
         var availableCash = await DbService.GetAvailableCash();
-        if (partialAmount > availableCash)
-        {
-            // Not enough money
-            return;
-        }
+        if (partialAmount > availableCash) return;
 
-        // Create a DebtPayment transaction
         var paymentTx = new Transaction
             {
                 Title = debt.Title,
@@ -353,16 +344,12 @@
             };
 
         await DbService.CreateTransaction(paymentTx);
+        FractionSelections.Remove(debt.DebtId);
 
-        // Remove the fraction once cleared
-        fractionSelections.Remove(debt.DebtId);
-
-        // Reload debts from DB, refresh
         Debts = await DbService.GetAllDebts();
         await RefreshDashboard();
     }
 
-    // --- Edit Debt (Modal) ---
     private void EditDebt(Debt debt)
     {
         EditableDebt = new Debt
@@ -382,7 +369,17 @@
 
     private async Task SaveDebtEdit()
     {
-        // Find in memory
+        if (string.IsNullOrWhiteSpace(EditableDebt.Title) ||
+            string.IsNullOrWhiteSpace(EditableDebt.Source) ||
+            string.IsNullOrWhiteSpace(EditableDebt.Tags) ||
+            EditableDebt.DueDate == DateTime.MinValue ||
+            EditableDebt.TotalAmount <= 0)
+        {
+            ErrorMessage = "All fields are required, and Total Amount must be greater than 0.";
+            StateHasChanged();
+            return;
+        }
+
         var existing = Debts.FirstOrDefault(d => d.DebtId == EditableDebt.DebtId);
         if (existing != null)
         {
@@ -407,7 +404,6 @@
         IsEditModalVisible = false;
     }
 
-    // --- Delete Debt ---
     private async Task DeleteDebt(Debt debt)
     {
         await DbService.DeleteDebt(debt);
