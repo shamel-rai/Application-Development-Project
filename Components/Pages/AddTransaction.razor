@@ -30,6 +30,61 @@
         </div>
     </div>
 
+    <!-- Total Number of Transactions -->
+    <div class="card mb-4">
+        <div class="card-body text-center">
+            <h5>Total Number of Transactions</h5>
+            <p class="fs-5 fw-bold">@FilteredTransactions.Count</p>
+        </div>
+    </div>
+
+    <!-- Search Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h4>Search Transactions</h4>
+            <div class="row g-3 align-items-center">
+                <div class="col-md-3">
+                    <label class="form-label">Title</label>
+                    <InputText @bind-Value="SearchTitle" class="form-control" placeholder="Search by title" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Type</label>
+                    <InputSelect @bind-Value="SearchType" class="form-select">
+                        <option value="">All</option>
+                        <option value="Credit">Credit</option>
+                        <option value="Debit">Debit</option>
+                    </InputSelect>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Tags</label>
+                    <InputText @bind-Value="SearchTags" class="form-control" placeholder="Search by tags" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Date</label>
+                    <InputDate @bind-Value="SearchDate" class="form-control" />
+                </div>
+                <div class="col-md-1">
+                    <button class="btn btn-primary w-100" @onclick="ApplyFilters">Apply Filters</button>
+                </div>
+                <div class="col-md-1">
+                    <button class="btn btn-secondary w-100" @onclick="ClearFilters">Clear Filters</button>
+                </div>
+            </div>
+
+            <!-- Sort By Dropdown -->
+            <div class="row mt-3">
+                <div class="col-md-12 text-end">
+                    <label class="form-label">Sort By</label>
+                    <select class="form-select w-auto d-inline" @bind="SortBy">
+                        <option value="Title">Title</option>
+                        <option value="Date">Date</option>
+                        <option value="Amount">Amount</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Add Transaction Section -->
     <div class="card">
         <div class="card-header">
@@ -184,6 +239,13 @@
     private bool IsEditModalVisible;
     private Transaction EditableTransaction;
 
+    private string SearchTitle = string.Empty;
+    private string SearchType = string.Empty;
+    private string SearchTags = string.Empty;
+    private DateTime? SearchDate;
+
+    private string SortBy = "Title";
+
     private CultureInfo PreferredCulture = CultureInfo.InvariantCulture;
 
     protected override async Task OnInitializedAsync()
@@ -229,9 +291,44 @@
         AvailableBalance = await DbService.GetAvailableCash();
     }
 
+    private void ApplyFilters()
+    {
+        UpdateFilteredTransactions();
+    }
+
+    private void ClearFilters()
+    {
+        SearchTitle = string.Empty;
+        SearchType = string.Empty;
+        SearchTags = string.Empty;
+        SearchDate = null;
+
+        UpdateFilteredTransactions();
+    }
+
     private void UpdateFilteredTransactions()
     {
-        FilteredTransactions = Transactions;
+        FilteredTransactions = Transactions
+            .Where(t =>
+                (string.IsNullOrWhiteSpace(SearchTitle) || t.Title.Contains(SearchTitle, StringComparison.OrdinalIgnoreCase)) &&
+                (string.IsNullOrWhiteSpace(SearchType) || t.Type.Equals(SearchType, StringComparison.OrdinalIgnoreCase)) &&
+                (string.IsNullOrWhiteSpace(SearchTags) || t.Tags.Contains(SearchTags, StringComparison.OrdinalIgnoreCase)) &&
+                (!SearchDate.HasValue || t.Date.Date == SearchDate.Value.Date))
+            .ToList();
+
+      
+        if (SortBy == "Title")
+        {
+            FilteredTransactions = FilteredTransactions.OrderBy(t => t.Title).ToList();
+        }
+        else if (SortBy == "Date")
+        {
+            FilteredTransactions = FilteredTransactions.OrderBy(t => t.Date).ToList();
+        }
+        else if (SortBy == "Amount")
+        {
+            FilteredTransactions = FilteredTransactions.OrderBy(t => t.Amount).ToList();
+        }
     }
 
     private async Task HandleSubmit()

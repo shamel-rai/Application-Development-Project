@@ -21,17 +21,14 @@ namespace MoneyTracks.Services
 
             _connection = new SQLiteAsyncConnection(dbPath);
 
-            // Ensure tables exist
             _connection.CreateTableAsync<User>().Wait();
             _connection.CreateTableAsync<Transaction>().Wait();
             _connection.CreateTableAsync<Debt>().Wait();
         }
 
         //  User CRUD
-      
         public async Task<User> GetLoggedInUser()
         {
-            // returns the first user in the DB
             return await _connection.Table<User>().FirstOrDefaultAsync();
         }
 
@@ -47,10 +44,7 @@ namespace MoneyTracks.Services
         public async Task Delete(User user) =>
             await _connection.DeleteAsync(user);
 
-
-     
         //  Transaction CRUD
-      
         public async Task<List<Transaction>> GetTransactions() =>
             await _connection.Table<Transaction>().ToListAsync();
 
@@ -59,7 +53,6 @@ namespace MoneyTracks.Services
 
         public async Task CreateTransaction(Transaction transaction)
         {
-            // If it's a direct debit, verify we have enough available cash
             if (transaction.Type == "Debit")
             {
                 var availableBalance = await GetAvailableCash();
@@ -69,14 +62,12 @@ namespace MoneyTracks.Services
                 }
             }
 
-            // If it's a debt payment, handle with a dedicated method
             if (transaction.Type == "DebtPayment")
             {
                 await CreateDebtPaymentTransaction(transaction);
             }
             else
             {
-                // Insert normal credit/debit
                 await _connection.InsertAsync(transaction);
             }
         }
@@ -96,21 +87,26 @@ namespace MoneyTracks.Services
             return transactions;
         }
 
-
         //  Dashboard
-      
         public async Task<DashboardSummary> GetDashboardSummary()
         {
             var transactions = await GetTransactions();
             var debts = await GetAllDebts();
 
+            var totalTransactions = transactions.Count;
+            var totalTransactionAmount = transactions.Where(t => t.Type == "Credit").Sum(t => t.Amount)
+                                          + debts.Sum(d => d.TotalAmount)
+                                          - transactions.Where(t => t.Type == "Debit" || t.Type == "DebtPayment").Sum(t => t.Amount);
+
             return new DashboardSummary
             {
                 TotalInflows = transactions.Where(t => t.Type == "Credit").Sum(t => t.Amount),
-                TotalOutflows = transactions.Where(t => t.Type == "Debit").Sum(t => t.Amount),
+                TotalOutflows = transactions.Where(t => t.Type == "Debit" || t.Type == "DebtPayment").Sum(t => t.Amount),
                 TotalDebts = debts.Sum(d => d.TotalAmount),
                 ClearedDebts = debts.Where(d => d.IsCleared).Sum(d => d.TotalAmount),
-                RemainingDebts = debts.Sum(d => d.RemainingAmount)
+                RemainingDebts = debts.Sum(d => d.RemainingAmount),
+                TotalTransactions = totalTransactions,  
+                TotalTransactionAmount = totalTransactionAmount 
             };
         }
 
@@ -123,9 +119,7 @@ namespace MoneyTracks.Services
             return debts;
         }
 
-
         //  Debt CRUD
- 
         public async Task<List<Debt>> GetAllDebts() =>
             await _connection.Table<Debt>().ToListAsync();
 
@@ -159,7 +153,6 @@ namespace MoneyTracks.Services
 
         public async Task DeleteDebt(Debt debt) =>
             await _connection.DeleteAsync(debt);
-
 
         // Handles Debt Payment
         public async Task CreateDebtPaymentTransaction(Transaction transaction)
@@ -200,10 +193,7 @@ namespace MoneyTracks.Services
             await _connection.UpdateAsync(debt);
         }
 
-
-        // ---------------------
         //  Utilities
-        // ---------------------
         public async Task<decimal> GetAvailableCash()
         {
             var transactions = await GetTransactions();

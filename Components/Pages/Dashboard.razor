@@ -6,6 +6,7 @@
 
 <div class="container py-5">
     <style>
+        /* Existing Styles */
         body {
             background-color: #f0f2f5;
         }
@@ -21,58 +22,83 @@
                 transform: translateY(-5px);
             }
 
-        .metric-card {
-            background: linear-gradient(145deg, #ffffff, #f5f7fa);
-            border-radius: 12px;
-            padding: 1.5rem;
-        }
-
-        .metric-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
         .transactions-list {
             max-height: 400px;
             overflow-y: auto;
         }
 
-        .transaction-item {
-            border-left: 4px solid transparent;
-            transition: all 0.2s ease;
+        .filter-bar {
+            margin-bottom: 1.5rem;
         }
 
-            .transaction-item:hover {
-                background-color: #f8f9fa;
-            }
-
-            .transaction-item.positive {
-                border-left-color: #28a745;
-            }
-
-            .transaction-item.negative {
-                border-left-color: #dc3545;
-            }
-
-        .progress {
-            height: 8px;
+        .metric-card {
+            padding: 1.5rem;
         }
     </style>
 
-    <!-- Header -->
+    <!-- Header and Filters -->
     <div class="row mb-4 align-items-center">
         <div class="col">
             <h2 class="fw-bold text-dark mb-0">Financial Dashboard</h2>
             <p class="text-muted mb-0">@($"Updated as of {DateTime.Now:MMMM dd, yyyy}")</p>
         </div>
+        <div class="col-auto">
+            <div class="filter-bar d-flex">
+                <input type="date" class="form-control me-2" @bind="StartDate" />
+                <input type="date" class="form-control me-2" @bind="EndDate" />
+                <button class="btn btn-primary" @onclick="ApplyDateFilter">Apply Filter</button>
+            </div>
+        </div>
     </div>
 
+    <!-- New Section: Highest/Lowest Inflow, Outflow, and Debts -->
     <div class="row g-4 mb-4">
-        <!-- Cash Flow Card -->
+        <div class="col-md-4">
+            <div class="dashboard-card p-4">
+                <h6 class="fw-bold">Highest Inflow</h6>
+                @if (HighestInflow != null)
+                {
+                    <p class="text-success">@FormatAmount(HighestInflow.Amount)</p>
+                    <small>@HighestInflow.Date.ToString("MMM d, yyyy")</small>
+                }
+                else
+                {
+                    <p class="text-muted">No inflows found</p>
+                }
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="dashboard-card p-4">
+                <h6 class="fw-bold">Highest Outflow</h6>
+                @if (HighestOutflow != null)
+                {
+                    <p class="text-danger">@("-" + FormatAmount(HighestOutflow.Amount))</p>
+                    <small>@HighestOutflow.Date.ToString("MMM d, yyyy")</small>
+                }
+                else
+                {
+                    <p class="text-muted">No outflows found</p>
+                }
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="dashboard-card p-4">
+                <h6 class="fw-bold">Highest Debt Transaction</h6>
+                @if (HighestDebt != null)
+                {
+                    <p class="text-warning">@FormatAmount(HighestDebt.RemainingAmount)</p>
+                    <small>@HighestDebt.DueDate.ToString("MMM d, yyyy")</small>
+                }
+                else
+                {
+                    <p class="text-muted">No debt transactions found</p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Cash Flow and Metrics Row -->
+    <div class="row g-4 mb-4">
         <div class="col-md-6 col-lg-3">
             <div class="dashboard-card h-100">
                 <div class="metric-card">
@@ -94,7 +120,6 @@
             </div>
         </div>
 
-        <!-- Total Debts Card -->
         <div class="col-md-6 col-lg-3">
             <div class="dashboard-card h-100">
                 <div class="metric-card">
@@ -121,7 +146,6 @@
             </div>
         </div>
 
-        <!-- Debt Status Card -->
         <div class="col-md-6 col-lg-3">
             <div class="dashboard-card h-100">
                 <div class="metric-card">
@@ -143,7 +167,6 @@
             </div>
         </div>
 
-        <!-- Available Cash Card -->
         <div class="col-md-6 col-lg-3">
             <div class="dashboard-card h-100">
                 <div class="metric-card">
@@ -160,9 +183,29 @@
         </div>
     </div>
 
-    <!-- Highest & Lowest Transactions Row -->
+    <!-- New Section: Total Transactions and Total Transaction Amount -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6 col-lg-3">
+            <div class="dashboard-card h-100">
+                <div class="metric-card">
+                    <h6 class="mb-3">Total Transactions</h6>
+                    <h3 class="text-muted mb-0">@SummaryData.TotalTransactions</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="dashboard-card h-100">
+                <div class="metric-card">
+                    <h6 class="mb-3">Total Transaction Amount</h6>
+                    <h3 class="text-muted mb-0">@FormatAmount(SummaryData.TotalTransactionAmount)</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transactions Row -->
     <div class="row g-4">
-        <!-- Highest Transaction -->
         <div class="col-lg-6">
             <div class="dashboard-card p-4">
                 <h5 class="mb-4">Highest Transaction</h5>
@@ -199,7 +242,6 @@
             </div>
         </div>
 
-        <!-- Lowest Transaction -->
         <div class="col-lg-6">
             <div class="dashboard-card p-4">
                 <h5 class="mb-4">Lowest Transaction</h5>
@@ -324,48 +366,55 @@
 </div>
 
 @code {
-    private DashboardSummary SummaryData = new();
-    private Transaction HighestTransaction;
-    private Transaction LowestTransaction;
+    private DateTime? StartDate;
+    private DateTime? EndDate;
 
+    private DashboardSummary SummaryData = new();
+    private List<Transaction> AllTransactions = new();
+    private List<Transaction> RecentTransactions = new();
     private List<Debt> PendingDebts = new();
     private List<Debt> FilteredPendingDebts = new();
+    private Transaction HighestTransaction;
+    private Transaction LowestTransaction;
+    private Transaction HighestInflow;
+    private Transaction HighestOutflow;
+    private Debt HighestDebt;
     private decimal AvailableCash;
-    private List<Transaction> AllTransactions = new();
-
-    private List<Transaction> RecentTransactions = new();
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadDashboardData();
-    }
-
-    private async Task LoadDashboardData()
-    {
-        // Summaries
         SummaryData = await DbService.GetDashboardSummary();
-
-        // All transactions => find highest/lowest
         AllTransactions = await DbService.GetTransactions();
+
         if (AllTransactions.Any())
         {
-            var sorted = AllTransactions.OrderByDescending(x => x.Amount).ToList();
-            HighestTransaction = sorted.FirstOrDefault();
-            LowestTransaction = sorted.LastOrDefault();
+            HighestTransaction = AllTransactions.OrderByDescending(t => t.Amount).FirstOrDefault();
+            LowestTransaction = AllTransactions.OrderBy(t => t.Amount).FirstOrDefault();
+            HighestInflow = AllTransactions.Where(t => t.Type == "Credit").OrderByDescending(t => t.Amount).FirstOrDefault();
+            HighestOutflow = AllTransactions.Where(t => t.Type == "Debit").OrderByDescending(t => t.Amount).FirstOrDefault();
         }
 
-        // Recent transactions (last 5 by Date descending)
-        RecentTransactions = AllTransactions
-            .OrderByDescending(t => t.Date)
-            .Take(5)
-            .ToList();
-
-        // Pending Debts
         PendingDebts = await DbService.GetPendingDebtsDashboard();
         FilteredPendingDebts = PendingDebts;
-
-        // Available cash
+        HighestDebt = PendingDebts.OrderByDescending(d => d.RemainingAmount).FirstOrDefault();
+        RecentTransactions = AllTransactions.OrderByDescending(t => t.Date).Take(5).ToList();
         AvailableCash = await DbService.GetAvailableCash();
+    }
+
+    private async Task ApplyDateFilter()
+    {
+        if (StartDate.HasValue && EndDate.HasValue)
+        {
+            AllTransactions = (await DbService.GetTransactions())
+                .Where(t => t.Date >= StartDate.Value && t.Date <= EndDate.Value)
+                .ToList();
+
+            PendingDebts = (await DbService.GetPendingDebtsDashboard())
+                .Where(d => d.DueDate >= StartDate.Value && d.DueDate <= EndDate.Value)
+                .ToList();
+
+            await OnInitializedAsync();
+        }
     }
 
     private string FormatAmount(decimal amount)

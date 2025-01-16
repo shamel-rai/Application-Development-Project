@@ -8,6 +8,9 @@
         public decimal ClearedDebts { get; set; }
         public decimal RemainingDebts { get; set; }
 
+        public int TotalTransactions { get; set; }
+        public decimal TotalTransactionAmount { get; set; }
+
         public string FormatCurrency(decimal amount, string symbol)
         {
             return $"{symbol}{amount:N2}";

@@ -47,6 +47,55 @@
         </div>
     </div>
 
+    <!-- Filter/Search Section -->
+    <div class="mb-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="mb-0">Search and Filter Debts</h3>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Search by Title</label>
+                        <InputText @bind-Value="SearchTitle" class="form-control" placeholder="Enter debt title..." @oninput="OnSearchChanged" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Search by Source</label>
+                        <InputText @bind-Value="SearchSource" class="form-control" placeholder="Enter source..." @oninput="OnSearchChanged" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Search by Tags</label>
+                        <InputText @bind-Value="SearchTags" class="form-control" placeholder="Enter tags..." @oninput="OnSearchChanged" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Search by Due Date</label>
+                        <InputDate @bind-Value="SearchDueDate" class="form-control" placeholder="Select due date..." @oninput="OnSearchChanged" />
+                    </div>
+
+                    <div class="col-12 mt-3">
+                        <button type="button" class="btn btn-secondary" @onclick="ClearFilters">
+                            Clear Filters
+                        </button>
+                        <button type="button" class="btn btn-primary ms-2" @onclick="OnSearchChanged">Apply Filters</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sort By Dropdown -->
+        <div class="mt-3">
+            <label class="form-label">Sort By</label>
+            <select class="form-select" @bind="SortBy">
+                <option value="Title">Title</option>
+                <option value="DueDate">Due Date</option>
+                <option value="Amount">Amount</option>
+            </select>
+        </div>
+    </div>
+
     <!-- Add Debt Form -->
     <div class="card mb-4">
         <div class="card-header">
@@ -76,7 +125,8 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Due Date</label>
-                    <InputDate @bind-Value="NewDebt.DueDate" class="form-control" required />
+                    <InputDate @bind-Value="NewDebt.DueDate" class="form-control" required
+                               min="@DateTime.Today.ToString("yyyy-MM-dd")" />
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Tags</label>
@@ -144,7 +194,6 @@
                                     <td>
                                         @if (!debt.IsCleared)
                                         {
-                                            <!-- Only sets the fraction in memory; won't clear the debt yet -->
                                             <select class="form-select form-select-sm"
                                                     @onchange="(e) => OnFractionChanged(debt, e.Value?.ToString())">
                                                 <option value="">Select %</option>
@@ -217,7 +266,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Due Date</label>
-                            <InputDate @bind-Value="EditableDebt.DueDate" class="form-control" required />
+                            <InputDate @bind-Value="EditableDebt.DueDate" class="form-control" required min="@DateTime.Today.ToString("yyyy-MM-dd")" />
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Tags</label>
@@ -258,6 +307,13 @@
 
     private Dictionary<int, decimal> FractionSelections = new();
 
+    private string SearchTitle { get; set; } = "";
+    private string SearchSource { get; set; } = "";
+    private string SearchTags { get; set; } = "";
+    private DateTime? SearchDueDate { get; set; } = null;
+
+    private string SortBy { get; set; } = "Title";
+
     protected override async Task OnInitializedAsync()
     {
         Debts = await DbService.GetAllDebts();
@@ -284,30 +340,59 @@
         TotalDebtCount = Debts.Count;
 
         FilteredDebts = Debts;
+        OnSearchChanged();
+    }
+
+    private void OnSearchChanged()
+    {
+        FilteredDebts = Debts
+            .Where(d => (string.IsNullOrEmpty(SearchTitle) || d.Title.Contains(SearchTitle, StringComparison.OrdinalIgnoreCase)) &&
+                        (string.IsNullOrEmpty(SearchSource) || d.Source.Contains(SearchSource, StringComparison.OrdinalIgnoreCase)) &&
+                        (string.IsNullOrEmpty(SearchTags) || d.Tags.Contains(SearchTags, StringComparison.OrdinalIgnoreCase)) &&
+                        (!SearchDueDate.HasValue || d.DueDate == SearchDueDate.Value))
+            .ToList();
+
+        ApplySorting();
+    }
+
+    private void ApplySorting()
+    {
+        if (SortBy == "Title")
+        {
+            FilteredDebts = FilteredDebts.OrderBy(d => d.Title).ToList();
+        }
+        else if (SortBy == "DueDate")
+        {
+            FilteredDebts = FilteredDebts.OrderBy(d => d.DueDate).ToList();
+        }
+        else if (SortBy == "Amount")
+        {
+            FilteredDebts = FilteredDebts.OrderBy(d => d.TotalAmount).ToList();
+        }
     }
 
     private async Task HandleSubmit()
     {
-        if (string.IsNullOrWhiteSpace(NewDebt.Title) ||
-            string.IsNullOrWhiteSpace(NewDebt.Source) ||
-            string.IsNullOrWhiteSpace(NewDebt.Tags) ||
-            NewDebt.DueDate == DateTime.MinValue ||
-            NewDebt.TotalAmount <= 0)
+        // Validate the Due Date to ensure it is not in the past
+        if (NewDebt.DueDate < DateTime.Today)
         {
-            ErrorMessage = "All fields are required, and Total Amount must be greater than 0.";
-            StateHasChanged();
+            ErrorMessage = "Due Date cannot be in the past.";
             return;
         }
 
         NewDebt.RemainingAmount = NewDebt.TotalAmount;
         await DbService.AddDebt(NewDebt);
-        Debts.Add(NewDebt);
+
+        
+        Debts.Add(NewDebt);  
+        FilteredDebts = Debts; 
 
         NewDebt = new Debt { DueDate = DateTime.Today };
         ErrorMessage = null;
-
         await RefreshDashboard();
+        OnSearchChanged(); 
     }
+
 
     private void OnFractionChanged(Debt debt, string fractionStr)
     {
@@ -409,5 +494,14 @@
         await DbService.DeleteDebt(debt);
         Debts.Remove(debt);
         await RefreshDashboard();
+    }
+
+    private void ClearFilters()
+    {
+        SearchTitle = "";
+        SearchSource = "";
+        SearchTags = "";
+        SearchDueDate = null;
+        OnSearchChanged();
     }
 }

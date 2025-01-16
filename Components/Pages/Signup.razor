@@ -110,7 +110,7 @@
                 return;
             }
 
-            var users = await DbService.GetUsers(); // "GetUsers()" is valid
+            var users = await DbService.GetUsers(); 
             if (users.Any(u => u.Username == user.Username || u.Email == user.Email))
             {
                 errorMessage = "A user with the same username or email already exists.";
