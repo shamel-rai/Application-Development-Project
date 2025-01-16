@@ -27,20 +27,17 @@ namespace MoneyTracks.Services
             _connection.CreateTableAsync<Debt>().Wait();
         }
 
-        // ----------------------------------------------------------------
+        // ---------------------
         //  User CRUD
-        // ----------------------------------------------------------------
+        // ---------------------
         public async Task<User> GetLoggedInUser()
         {
-            // Just fetch the first user for demo
+            // For demo, returns the first user in the DB
             return await _connection.Table<User>().FirstOrDefaultAsync();
         }
 
         public async Task<List<User>> GetUsers() =>
             await _connection.Table<User>().ToListAsync();
-
-        public async Task<User> GetByID(int id) =>
-            await _connection.Table<User>().FirstOrDefaultAsync(x => x.UserId == id);
 
         public async Task Create(User user) =>
             await _connection.InsertAsync(user);
@@ -52,9 +49,9 @@ namespace MoneyTracks.Services
             await _connection.DeleteAsync(user);
 
 
-        // ----------------------------------------------------------------
+        // ---------------------
         //  Transaction CRUD
-        // ----------------------------------------------------------------
+        // ---------------------
         public async Task<List<Transaction>> GetTransactions() =>
             await _connection.Table<Transaction>().ToListAsync();
 
@@ -101,9 +98,9 @@ namespace MoneyTracks.Services
         }
 
 
-        // ----------------------------------------------------------------
+        // ---------------------
         //  Dashboard
-        // ----------------------------------------------------------------
+        // ---------------------
         public async Task<DashboardSummary> GetDashboardSummary()
         {
             var transactions = await GetTransactions();
@@ -129,15 +126,14 @@ namespace MoneyTracks.Services
         }
 
 
-        // ----------------------------------------------------------------
+        // ---------------------
         //  Debt CRUD
-        // ----------------------------------------------------------------
+        // ---------------------
         public async Task<List<Debt>> GetAllDebts() =>
             await _connection.Table<Debt>().ToListAsync();
 
         public async Task AddDebt(Debt debt)
         {
-            // Initialize remaining amount
             debt.RemainingAmount = debt.TotalAmount;
             await _connection.InsertAsync(debt);
         }
@@ -168,25 +164,18 @@ namespace MoneyTracks.Services
             await _connection.DeleteAsync(debt);
 
 
-        // ----------------------------------------------------------------
-        //  Handle Debt Payment Transaction
-        // ----------------------------------------------------------------
+        // Handle Debt Payment
         public async Task CreateDebtPaymentTransaction(Transaction transaction)
         {
-            // If it references a specific debt by Title
             if (transaction.IsPendingDebt)
             {
                 var debt = await _connection.Table<Debt>()
                     .FirstOrDefaultAsync(d => d.Title == transaction.Title);
-
                 if (debt != null)
                 {
-                    // Decrease the debt
                     await UpdateDebtAfterPayment(debt.DebtId, transaction.Amount);
                 }
             }
-
-            // Finally insert the "DebtPayment" transaction
             await _connection.InsertAsync(transaction);
         }
 
@@ -200,14 +189,12 @@ namespace MoneyTracks.Services
 
             if (availableCash >= debt.RemainingAmount)
             {
-                // Clear fully
                 availableCash -= debt.RemainingAmount;
                 debt.RemainingAmount = 0;
                 debt.IsCleared = true;
             }
             else
             {
-                // Partially clear
                 debt.RemainingAmount -= availableCash;
                 debt.IsCleared = false;
                 availableCash = 0;
@@ -217,31 +204,16 @@ namespace MoneyTracks.Services
         }
 
 
-        // ----------------------------------------------------------------
+        // ---------------------
         //  Utilities
-        // ----------------------------------------------------------------
-        public async Task<string> GetCurrencySymbol()
-        {
-            var user = await GetLoggedInUser();
-            return user?.PreferredCurrency switch
-            {
-                "USD" => "$",
-                "EUR" => "€",
-                "GBP" => "£",
-                "JPY" => "¥",
-                _ => "$" // default to USD
-            };
-        }
-
+        // ---------------------
         public async Task<decimal> GetAvailableCash()
         {
             var transactions = await GetTransactions();
-
             var totalInflows = transactions
                 .Where(t => t.Type == "Credit")
                 .Sum(t => t.Amount);
 
-            // Both "Debit" and "DebtPayment" are outflows
             var totalOutflows = transactions
                 .Where(t => t.Type == "Debit" || t.Type == "DebtPayment")
                 .Sum(t => t.Amount);

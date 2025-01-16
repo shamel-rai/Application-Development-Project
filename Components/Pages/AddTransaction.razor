@@ -1,35 +1,30 @@
 ﻿@page "/add-transaction"
 @using MoneyTracks.Models
-@inject MoneyTracks.Services.LocalDbService DbService
+@using MoneyTracks.Services
+@using System.Globalization
+@inject LocalDbService DbService
 
 <div class="container mt-4">
-    <!-- Transaction Overview -->
+    <!-- Transaction Overview, e.g. total inflow/outflow -->
     <div class="card mb-4">
         <div class="card-body">
-            <h4 class="card-title">Transaction Overview</h4>
+            <h4>Transaction Overview</h4>
             <div class="row text-center">
-                <!-- 1. Total Balance (Inflow - Outflow) -->
                 <div class="col-md-3">
                     <h5>Total Balance</h5>
-                    <p class="text-primary fs-5 fw-bold">@TotalBalance.ToString("C")</p>
+                    <p class="text-primary fs-5 fw-bold">@FormatAmount(TotalBalance)</p>
                 </div>
-
-                <!-- 2. Available Balance (from DbService.GetAvailableCash()) -->
                 <div class="col-md-3">
                     <h5>Available Balance</h5>
-                    <p class="text-info fs-5 fw-bold">@AvailableBalance.ToString("C")</p>
+                    <p class="text-info fs-5 fw-bold">@FormatAmount(AvailableBalance)</p>
                 </div>
-
-                <!-- 3. Total Inflow -->
                 <div class="col-md-3">
                     <h5>Total Inflow</h5>
-                    <p class="text-success fs-5 fw-bold">@TotalInflow.ToString("C")</p>
+                    <p class="text-success fs-5 fw-bold">@FormatAmount(TotalInflow)</p>
                 </div>
-
-                <!-- 4. Total Outflow -->
                 <div class="col-md-3">
                     <h5>Total Outflow</h5>
-                    <p class="text-danger fs-5 fw-bold">@TotalOutflow.ToString("C")</p>
+                    <p class="text-danger fs-5 fw-bold">@FormatAmount(TotalOutflow)</p>
                 </div>
             </div>
         </div>
@@ -38,20 +33,17 @@
     <!-- Add Transaction Section -->
     <div class="card">
         <div class="card-header">
-            <h3 class="mb-0">Add Transaction</h3>
+            <h3>Add Transaction</h3>
         </div>
         <div class="card-body">
             <EditForm Model="NewTransaction" OnValidSubmit="HandleSubmit" class="row g-3">
                 <DataAnnotationsValidator />
                 <ValidationSummary class="alert alert-danger" />
 
-                <!-- Title -->
                 <div class="col-md-6">
                     <label class="form-label">Title</label>
                     <InputText @bind-Value="NewTransaction.Title" class="form-control" />
                 </div>
-
-                <!-- Type -->
                 <div class="col-md-6">
                     <label class="form-label">Type</label>
                     <InputSelect @bind-Value="NewTransaction.Type" class="form-select">
@@ -59,32 +51,22 @@
                         <option value="Debit">Debit</option>
                     </InputSelect>
                 </div>
-
-                <!-- Amount -->
                 <div class="col-md-6">
                     <label class="form-label">Amount</label>
                     <InputNumber @bind-Value="NewTransaction.Amount" class="form-control" />
                 </div>
-
-                <!-- Tags -->
-                <div class="col-md-6">
-                    <label class="form-label">Tags</label>
-                    <InputText @bind-Value="NewTransaction.Tags" class="form-control" />
-                </div>
-
-                <!-- Date -->
                 <div class="col-md-6">
                     <label class="form-label">Date</label>
                     <InputDate @bind-Value="NewTransaction.Date" class="form-control" />
                 </div>
-
-                <!-- Notes -->
+                <div class="col-md-6">
+                    <label class="form-label">Tags</label>
+                    <InputText @bind-Value="NewTransaction.Tags" class="form-control" />
+                </div>
                 <div class="col-md-6">
                     <label class="form-label">Notes</label>
                     <InputText @bind-Value="NewTransaction.Notes" class="form-control" />
                 </div>
-
-                <!-- Submit Button -->
                 <div class="col-12">
                     <button type="submit" class="btn btn-primary">Add Transaction</button>
                 </div>
@@ -92,279 +74,184 @@
         </div>
     </div>
 
-    <!-- Transactions List Section -->
+    <!-- Transactions List -->
     <div class="card mt-4">
         <div class="card-header">
-            <div class="row">
-                <div class="col-md-6">
-                    <h3 class="mb-0">Transactions</h3>
-                </div>
-                <div class="col-md-6 text-end">
-                    <InputText @bind-Value="SearchQuery" class="form-control" placeholder="Search transactions..." />
-                </div>
-            </div>
+            <h3>Transactions</h3>
         </div>
         <div class="card-body">
-            <!-- Filter, sort UI -->
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <label class="form-label">Sort By</label>
-                    <InputSelect @bind-Value="SortBy" class="form-select">
-                        <option value="Title">Title</option>
-                        <option value="Date">Date</option>
-                        <option value="Amount">Amount</option>
-                        <option value="Type">Type</option>
-                    </InputSelect>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Filter By Type</label>
-                    <InputSelect @bind-Value="FilterByType" class="form-select">
-                        <option value="">All</option>
-                        <option value="Credit">Credit</option>
-                        <option value="Debit">Debit</option>
-                    </InputSelect>
-                </div>
-            </div>
-
-            <button class="btn btn-secondary mb-3" @onclick="ToggleSortDirection">
-                Sort Direction: @(SortDescending ? "Descending" : "Ascending")
-            </button>
-
             @if (FilteredTransactions == null || !FilteredTransactions.Any())
             {
                 <div class="alert alert-info">No transactions found.</div>
             }
             else
             {
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover">
-                        <thead class="table-light">
+                <table class="table table-striped table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Title</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                            <th>Notes</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var tx in FilteredTransactions)
+                        {
                             <tr>
-                                <th>Title</th>
-                                <th>Type</th>
-                                <th>Amount</th>
-                                <th>Tags</th>
-                                <th>Date</th>
-                                <th>Notes</th>
-                                <th>Actions</th>
+                                <td>@tx.Title</td>
+                                <td>@tx.Type</td>
+                                <!-- Example of dynamic currency usage -->
+                                <td>@FormatAmount(tx.Amount)</td>
+                                <td>@tx.Date.ToShortDateString()</td>
+                                <td>@tx.Notes</td>
+                                <td>
+                                    <button class="btn btn-warning btn-sm me-2" @onclick="() => OpenEditModal(tx)">Edit</button>
+                                    <button class="btn btn-danger btn-sm" @onclick="() => DeleteTransaction(tx)">Delete</button>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var tx in FilteredTransactions)
-                            {
-                                <tr>
-                                    <td>@tx.Title</td>
-                                    <td>
-                                        <span class="badge @(tx.Type switch
-                                        {
-                                            "Credit" => "bg-success",
-                                            "Debit" => "bg-danger",
-                                            _ => "bg-secondary"
-                                        })">
-                                            @tx.Type
-                                        </span>
-                                    </td>
-                                    <td>@tx.Amount.ToString("C")</td>
-                                    <td>
-                                        @foreach (var tag in tx.ParsedTags)
-                                        {
-                                            <span class="badge bg-info me-1">@tag</span>
-                                        }
-                                    </td>
-                                    <td>@tx.Date.ToShortDateString()</td>
-                                    <td>@tx.Notes</td>
-                                    <td>
-                                        <button class="btn btn-warning btn-sm me-2"
-                                                @onclick="() => OpenEditModal(tx)">
-                                            Edit
-                                        </button>
-                                        <button class="btn btn-danger btn-sm"
-                                                @onclick="() => DeleteTransaction(tx)">
-                                            Delete
-                                        </button>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
+                        }
+                    </tbody>
+                </table>
             }
         </div>
     </div>
-</div>
 
-<!-- Edit Transaction Modal -->
-@if (IsEditModalVisible)
-{
-    <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Edit Transaction</h5>
-                    <button type="button" class="btn-close" @onclick="CloseEditModal"></button>
-                </div>
-                <div class="modal-body">
-                    <EditForm Model="EditableTransaction" OnValidSubmit="SaveEdit" class="row g-3">
-                        <DataAnnotationsValidator />
-                        <ValidationSummary class="alert alert-danger" />
+    @if (IsEditModalVisible)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edit Transaction</h5>
+                        <button type="button" class="btn-close" @onclick="CloseEditModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <EditForm Model="EditableTransaction" OnValidSubmit="SaveEdit" class="row g-3">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="alert alert-danger" />
 
-                        <div class="col-md-6">
-                            <label class="form-label">Title</label>
-                            <InputText @bind-Value="EditableTransaction.Title" class="form-control" />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Type</label>
-                            <InputSelect @bind-Value="EditableTransaction.Type" class="form-select">
-                                <option value="Credit">Credit</option>
-                                <option value="Debit">Debit</option>
-                            </InputSelect>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Amount</label>
-                            <InputNumber @bind-Value="EditableTransaction.Amount" class="form-control" />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Tags</label>
-                            <InputText @bind-Value="EditableTransaction.Tags" class="form-control" />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Date</label>
-                            <InputDate @bind-Value="EditableTransaction.Date" class="form-control" />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Notes</label>
-                            <InputText @bind-Value="EditableTransaction.Notes" class="form-control" />
-                        </div>
-
-                        <div class="col-12 mt-3">
-                            <button type="submit" class="btn btn-success">Save Changes</button>
-                            <button type="button" class="btn btn-secondary" @onclick="CloseEditModal">
-                                Cancel
-                            </button>
-                        </div>
-                    </EditForm>
+                            <div class="col-md-6">
+                                <label class="form-label">Title</label>
+                                <InputText @bind-Value="EditableTransaction.Title" class="form-control" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Type</label>
+                                <InputSelect @bind-Value="EditableTransaction.Type" class="form-select">
+                                    <option value="Credit">Credit</option>
+                                    <option value="Debit">Debit</option>
+                                </InputSelect>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Amount</label>
+                                <InputNumber @bind-Value="EditableTransaction.Amount" class="form-control" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Date</label>
+                                <InputDate @bind-Value="EditableTransaction.Date" class="form-control" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Tags</label>
+                                <InputText @bind-Value="EditableTransaction.Tags" class="form-control" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Notes</label>
+                                <InputText @bind-Value="EditableTransaction.Notes" class="form-control" />
+                            </div>
+                            <div class="col-12 mt-3">
+                                <button type="submit" class="btn btn-success">Save Changes</button>
+                                <button type="button" class="btn btn-secondary" @onclick="CloseEditModal">Cancel</button>
+                            </div>
+                        </EditForm>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-}
+    }
+</div>
 
 @code {
-    // New transaction model
-    private Transaction NewTransaction = new Transaction
-        {
-            Type = "Credit",
-            Date = DateTime.Today
-        };
-
-    // Our transactions from DB
+    private Transaction NewTransaction = new Transaction { Type = "Credit", Date = DateTime.Today };
     private List<Transaction> Transactions = new();
-    // The displayed/filtered subset
     private List<Transaction> FilteredTransactions = new();
 
-    // Overview fields
-    private decimal TotalInflow;       // Sum of all "Credit"
-    private decimal TotalOutflow;      // Sum of all "Debit"
-    private decimal TotalBalance;      // Inflow - Outflow
-    private decimal AvailableBalance;  // From DbService.GetAvailableCash()
+    private decimal TotalBalance;
+    private decimal TotalInflow;
+    private decimal TotalOutflow;
+    private decimal AvailableBalance;
 
-    // For searching/filtering
-    private string SearchQuery = "";
-    private string SortBy = "Date";
-    private bool SortDescending;
-    private string FilterByType = "";
-
-    // For editing
     private bool IsEditModalVisible;
     private Transaction EditableTransaction;
 
+    // For dynamic currency
+    private CultureInfo PreferredCulture = CultureInfo.InvariantCulture;
+
     protected override async Task OnInitializedAsync()
     {
+        // 1. Load user + map currency
+        var user = await DbService.GetLoggedInUser();
+        var code = user?.PreferredCurrency ?? "USD";
+        PreferredCulture = MapCurrencyToCulture(code);
+
         await LoadTransactionsFromDatabase();
         await UpdateOverview();
         UpdateFilteredTransactions();
+    }
+
+    private CultureInfo MapCurrencyToCulture(string code)
+    {
+        return code switch
+        {
+            "USD" => new CultureInfo("en-US"),
+            "EUR" => new CultureInfo("fr-FR"),
+            "GBP" => new CultureInfo("en-GB"),
+            "JPY" => new CultureInfo("ja-JP"),
+            "AUD" => new CultureInfo("en-AU"),
+            _ => CultureInfo.InvariantCulture
+        };
+    }
+
+    private string FormatAmount(decimal amount)
+    {
+        return amount.ToString("C", PreferredCulture);
     }
 
     private async Task LoadTransactionsFromDatabase()
     {
         Transactions = await DbService.GetTransactions();
-        // Also get the dynamic "AvailableBalance" from your local DB logic
         AvailableBalance = await DbService.GetAvailableCash();
     }
 
     private async Task UpdateOverview()
     {
-        // Inflow
-        TotalInflow = Transactions
-            .Where(t => t.Type == "Credit")
-            .Sum(t => t.Amount);
-
-        // Outflow
-        TotalOutflow = Transactions
-            .Where(t => t.Type == "Debit")
-            .Sum(t => t.Amount);
-
-        // Balance = Inflow - Outflow
+        TotalInflow = Transactions.Where(t => t.Type == "Credit").Sum(t => t.Amount);
+        TotalOutflow = Transactions.Where(t => t.Type == "Debit").Sum(t => t.Amount);
         TotalBalance = TotalInflow - TotalOutflow;
-
-        // Also refresh the "AvailableBalance"
         AvailableBalance = await DbService.GetAvailableCash();
     }
 
     private void UpdateFilteredTransactions()
     {
-        var query = Transactions
-            .Where(t =>
-                (string.IsNullOrWhiteSpace(SearchQuery) ||
-                 t.Title.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase))
-                &&
-                (string.IsNullOrWhiteSpace(FilterByType) ||
-                 t.Type == FilterByType));
-
-        query = (SortBy, SortDescending) switch
-        {
-            ("Title", false) => query.OrderBy(t => t.Title),
-            ("Title", true) => query.OrderByDescending(t => t.Title),
-            ("Date", false) => query.OrderBy(t => t.Date),
-            ("Date", true) => query.OrderByDescending(t => t.Date),
-            ("Amount", false) => query.OrderBy(t => t.Amount),
-            ("Amount", true) => query.OrderByDescending(t => t.Amount),
-            ("Type", false) => query.OrderBy(t => t.Type),
-            ("Type", true) => query.OrderByDescending(t => t.Type),
-            _ => query.OrderBy(t => t.Date)
-        };
-
-        FilteredTransactions = query.ToList();
+        FilteredTransactions = Transactions; // Or do more advanced filtering
     }
 
     private async Task HandleSubmit()
     {
-        // For a debit, optionally check if we have enough "TotalBalance" or "AvailableBalance"
         if (NewTransaction.Type == "Debit" && NewTransaction.Amount > AvailableBalance)
         {
-            // Insufficient funds logic
+            // insufficient funds logic
             return;
         }
-
-        // Insert the new transaction
         await DbService.CreateTransaction(NewTransaction);
 
-        // Reset the form
-        NewTransaction = new Transaction { Type = "Credit", Date = DateTime.Today };
-
-        // Reload + update
+        // reload
         await LoadTransactionsFromDatabase();
         await UpdateOverview();
         UpdateFilteredTransactions();
-    }
 
-    private async Task DeleteTransaction(Transaction tx)
-    {
-        await DbService.DeleteTransaction(tx);
-        Transactions.Remove(tx);
-
-        await UpdateOverview();
-        UpdateFilteredTransactions();
+        NewTransaction = new Transaction { Type = "Credit", Date = DateTime.Today };
     }
 
     private void OpenEditModal(Transaction tx)
@@ -379,13 +266,11 @@
                 Date = tx.Date,
                 Notes = tx.Notes
             };
-
         IsEditModalVisible = true;
     }
 
     private async Task SaveEdit()
     {
-        // Locate the existing transaction in memory
         var existing = Transactions.FirstOrDefault(t => t.TransactionId == EditableTransaction.TransactionId);
         if (existing != null)
         {
@@ -396,12 +281,10 @@
             existing.Date = EditableTransaction.Date;
             existing.Notes = EditableTransaction.Notes;
 
-            // Update DB
             await DbService.UpdateTransaction(existing);
         }
 
         IsEditModalVisible = false;
-
         await UpdateOverview();
         UpdateFilteredTransactions();
     }
@@ -411,9 +294,11 @@
         IsEditModalVisible = false;
     }
 
-    private void ToggleSortDirection()
+    private async Task DeleteTransaction(Transaction tx)
     {
-        SortDescending = !SortDescending;
+        await DbService.DeleteTransaction(tx);
+        Transactions.Remove(tx);
+        await UpdateOverview();
         UpdateFilteredTransactions();
     }
 }
