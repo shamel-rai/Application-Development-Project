@@ -23,7 +23,11 @@
                         <div class="mb-3">
                             <label for="email" class="form-label">Email</label>
                             <input type="email" class="form-control" id="email"
-                                   @bind="user.Email" required />
+                                   @bind="user.Email" required @oninput="ValidateEmail" />
+                            @if (!string.IsNullOrEmpty(emailErrorMessage))
+                            {
+                                <div class="text-danger mt-1">@emailErrorMessage</div>
+                            }
                         </div>
 
                         <div class="mb-3">
@@ -55,9 +59,15 @@
                         }
 
                         <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary">Register</button>
+                            <button type="submit" class="btn btn-primary" disabled="@(!string.IsNullOrEmpty(emailErrorMessage))">
+                                Register
+                            </button>
                         </div>
                     </form>
+                    <div class="text-center mt-3">
+                        <span class="text-muted">Already have an account?</span>
+                        <a href="/" class="text-decoration-none">Log in</a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -69,11 +79,37 @@
     private string password = string.Empty;
     private string? successMessage = null;
     private string? errorMessage = null;
+    private string? emailErrorMessage = null;
+
+    private void ValidateEmail(ChangeEventArgs e)
+    {
+        var email = e.Value?.ToString();
+        if (!string.IsNullOrEmpty(email) && !IsValidEmailDomain(email))
+        {
+            emailErrorMessage = "Email must be a valid Gmail or Outlook address.";
+        }
+        else
+        {
+            emailErrorMessage = null;
+        }
+    }
+
+    private bool IsValidEmailDomain(string email)
+    {
+        return email.EndsWith("@gmail.com", StringComparison.OrdinalIgnoreCase) ||
+               email.EndsWith("@outlook.com", StringComparison.OrdinalIgnoreCase);
+    }
 
     private async Task HandleSignup()
     {
         try
         {
+            if (!IsValidEmailDomain(user.Email))
+            {
+                errorMessage = "Invalid email domain. Please use Gmail or Outlook.";
+                return;
+            }
+
             var users = await DbService.GetUsers(); // "GetUsers()" is valid
             if (users.Any(u => u.Username == user.Username || u.Email == user.Email))
             {
@@ -82,7 +118,6 @@
             }
 
             user.Password = HashPassword(password);
-            // "Create(User user)" is valid
             await DbService.Create(user);
 
             successMessage = "User registered successfully!";
